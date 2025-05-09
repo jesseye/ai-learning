@@ -64,7 +64,7 @@ def pdf_to_markdown(pdf_path: str) -> str:
         
         # 格式化文本块
         for block in text_blocks:
-            if "lines" in block:
+            if "lines" in block:  # 文本段落
                 for line in block["lines"]:
                     for span in line["spans"]:
                         text = span["text"]
@@ -82,6 +82,30 @@ def pdf_to_markdown(pdf_path: str) -> str:
                         else:
                             markdown_content += f"{text} "
                     markdown_content += "\n"
+            
+            # 检测表格
+            elif "table" in block.get("type", ""):
+                table_text = "\n| " + " | ".join(block["cells"][0]) + " |\n"
+                table_text += "| " + " | ".join(["---"] * len(block["cells"][0])) + " |\n"
+                for row in block["cells"][1:]:
+                    table_text += "| " + " | ".join(row) + " |\n"
+                markdown_content += table_text + "\n"
+                
+            # 检测图片
+            elif "image" in block.get("type", ""):
+                xref = block["xref"]
+                base_image = doc.extract_image(xref)
+                image_bytes = base_image["image"]
+                image_ext = base_image["ext"]
+                
+                # 保存图片
+                image_path = os.path.join(image_dir, f"page_{page.number+1}_img_{len(image_list)}.{image_ext}")
+                with open(image_path, "wb") as f:
+                    f.write(image_bytes)
+                
+                # 添加Markdown图片引用
+                rel_image_path = os.path.join("images", f"page_{page.number+1}_img_{len(image_list)}.{image_ext}")
+                markdown_content += f"![Image]({rel_image_path})\n\n"
     
     return markdown_content
 
